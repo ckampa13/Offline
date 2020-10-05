@@ -1,0 +1,60 @@
+//long baseSeed = 123;
+
+
+//
+// Run time configuration to help debug the beamline.
+// Run one of:
+//  - Primary proton gun
+//  - Single particle gun, configured to shoot muons out of the production target.
+//  - Particles from G4beamline format input file.
+// Original author Rob Kutschke
+
+// Particle gun configured to shoot muons out of the target towards the TS.
+// For the full set of parameters see EventGenerator/src/ParticleGun.cc
+bool particleGun.do      = true;
+
+// PDG code for mu_minus
+int particleGun.id = 13;
+
+// The middle of the production target; in Mu2e coordinates in mm.
+//vector<double> particleGun.point = { 3904., 0., -6564.5 };
+
+// 100 cm upstream of the middle of the production target.
+// ( so that muons are not all absorbed in the target ).
+// vector<double> particleGun.point = { -3904., 0., 12800. };
+// vector<double> particleGun.point = { -3904., 0., 11600. };
+// vector<double> particleGun.point = { -3904., 0., 11000. };
+// vector<double> particleGun.point = {-3904., 0., 9571. };
+vector<double> particleGun.point = {-3904., 0., 9800. };
+
+// Particles will be made uniformly in a box, centered on the above point.
+// Half sides of the box are in mm.
+// vector<double> particleGun.halfLength = { 900., 900., 200. };
+// vector<double> particleGun.halfLength = { 900., 900., 900. };
+// vector<double> particleGun.halfLength = { 900., 900., 6500. };
+// vector<double> particleGun.halfLength = { 900., 900., 6450. };
+vector<double> particleGun.halfLength = { 1000., 1000., 5000. };
+
+// For the MECO PS, particles more forward than -0.45 all go
+double         particleGun.czmin =  -1;
+double         particleGun.czmax =  1;
+// double         particleGun.czmin =  -0.1; //-1
+// double         particleGun.czmax =  0.1; //1
+
+// Momentum range.
+// double         particleGun.pmin  =  20.;
+// double         particleGun.pmin  =  70.;
+// double         particleGun.pmax  = 140.;
+double         particleGun.pmin  =  75.;
+double         particleGun.pmax  = 140.;
+// double         particleGun.pmin  =  75.;
+// double         particleGun.pmax  = 85.;
+
+bool particleGun.doHistograms = true;
+
+// This tells emacs to view this file in c++ mode.
+// Local Variables:
+// mode:c++
+// End:
+// Same for VIM
+// vi:syntax=cpp

@@ -1,0 +1,135 @@
+# -*- mode:tcl -*-
+
+#include "JobConfig/primary/prolog.fcl"
+
+BEGIN_PROLOG
+  TIMECUT : 700 #ns
+  TIMEUNC : 1 #ns
+END_PROLOG
+
+//================================================================
+// Give this job a name.
+process_name : isoMuStage1 
+
+source : {
+    module_type : EmptyEvent
+    maxEvents : 10000
+    resetEventOnSubRun   : false
+}
+
+services: @local::Services.Sim
+services.GeometryService.inputFile : "Mu2eG4/geom/geom_common_current_Mau12.txt" // Mau12
+// services.GeometryService.inputFile : "Mu2eG4/geom/geom_common_current.txt" // Mau13
+// services.GeometryService.inputFile : "Mu2eG4/geom/geom_common_current_Mau14.txt" // Mau14
+// services.TFileService.fileName     : "iso_muons_s1.root"
+services.TFileService.fileName     : "iso_muons_s1_Mau12.root"
+// services.TFileService.fileName     : "iso_muons_s1_Mau13.root"
+// services.TFileService.fileName     : "iso_muons_s1_Mau14.root"
+services.TimeTracker : {
+    printSummary : true
+    dbOutput : {
+	filename  : ""
+	overwrite : false
+    }
+}
+
+physics : {
+    producers : {
+	@table::Primary.producers
+	generate : {
+	    module_type          : EventGenerator
+	    inputfile            : "config/gun_iso_muons_s1.txt"
+	    // inputfile            : "config/gun_iso_muons_z13k_tight.txt"
+	}
+	// Save state of random numbers to the event
+	randomsaver: @local::randomsaver
+	compressPVtimeFilter : {
+	    module_type: CompressPhysicalVolumes
+	    volumesInput : "g4run"
+	    hitInputs : ["timeFilter:longlived"]
+	    particleInputs : [ "g4run" ]
+	}
+    }
+    analyzers: {
+	@table::Primary.analyzers
+	// Look at the hits from virtualdetectors
+	readvd: {
+            module_type      : ReadVirtualDetector
+      	    vdStepPoints     : "g4run:virtualdetector"
+      	    tvdStepPoints    : "g4run:timeVD"
+      	    saveVD           : [-1]
+      	    savePDG          : [ 13 ]
+      	    tvdDropPDG       : [ 2112 ]
+	    timeCut          : 0.1
+      	    maxPrint         : 10
+            simParticleColl  : "g4run"
+	}
+    }
+    filters: {
+	@table::Primary.filters
+	timeFilter : {
+	    module_type: FilterStepPointsByTime
+	    cutTimeMin: @local::TIMECUT
+	    cutTimeMinUnc : @local::TIMEUNC
+	    input: "g4run:timeVD"
+	    outInstanceName: "longlived"
+	    verbosityLevel : 1
+        }
+    }
+
+
+    p1 : [generate, g4run, randomsaver, timeFilter, compressPVtimeFilter]
+    trigger_paths  : [p1]
+
+    outputs: [outfile]
+    an: [ readvd ]
+    end_paths: [an, outputs]
+}
+
+outputs: {
+
+    outfile: {
+	module_type : RootOutput
+	SelectEvents: [p1] 
+	#FIXME: shouldn't need to keep everything
+	outputCommands:   [ //"drop *_*_*_*",
+			    "keep *_*_*_*"
+			    //"keep mu2e::genparticles_*_*_*",
+			    //"keep mu2e::geneventcount_*_*_*",
+			    //"keep mu2e::statusg4_*_*_*"
+			   ]
+	fileName    : "iso_muons_s1.art"
+    }
+
+}
+
+physics.producers.g4run.physics.physicsListName : "QGSP_BERT" // Don't need detail nuclear interactions
+physics.producers.g4run.ResourceLimits.maxStepsPerTrack : 1000000
+physics.producers.g4run.physics.minRangeCut : 1. // mm
+physics.producers.g4run.physics.bfieldMaxStep : 20. // mm
+//physics.producers.g4run.visualization.macro : "vis.mac"
+physics.producers.g4run.SDConfig: {
+    enableSD: [ virtualdetector ] // activate just the explicitly listed SDs
+    TimeVD: { times: [0, @local::TIMECUT] }
+}
+physics.producers.g4run.Mu2eG4CommonCut: {
+    type: union
+    pars: [
+	   { type: kineticEnergy cut: 10 },
+	   { type: globalTime cut: @local::TIMECUT },
+	   { type: inVolume pars: [HallAir] }
+	  ]
+}
+
+
+
+// Limit the amount of "Begin processing the ... record" messages
+//services.message.destinations.log.categories.ArtReport.reportEvery : 1
+//services.message.destinations.log.categories.ArtReport.limit : 1
+//services.message.destinations.log.categories.ArtReport.timespan : 300
+
+// Initialze seeding of random engines: do not put these lines in base .fcl files for grid jobs.
+services.SeedService.baseSeed         :  1
+services.SeedService.maxUniqueEngines :  20
+
+physics.producers.g4run.physics.noDecay     : [ 13, -13 ]
